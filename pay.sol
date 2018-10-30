@@ -12,6 +12,7 @@ contract Purchase {
         uint SPShare;
     }
     Transaction[] public trans;
+    // mapping(uint => Transaction) public trans;
     // User or SP or Business
     address[] public customers;
     
@@ -75,9 +76,13 @@ contract Purchase {
         for (uint i = 0; i < 3; i++) {
             trans[trans.length - 1].Confirmations[i] = false;
         }
+        customers.push(msg.sender);
         return tranNum;
     }
     
+    // #8
+    // 1. Assign the target user into the contract 
+    // 2.Check if User is a valid address or not
     function AssignUser(string transNum, address User)
         public
         InContract()
@@ -92,12 +97,15 @@ contract Purchase {
             }
         }
         if (!found) {
-            return;
+            revert();
+            // return;
         }
         Transaction storage t =  trans[index];
         if (msg.sender == t.Business) {
             t.User = User;
+            customers.push(User);
         }
+        
             
     }
     
@@ -115,12 +123,14 @@ contract Purchase {
             }
         }
         if (!found) {
-            return;
+            revert();
         }
         Transaction storage t =  trans[index];
         if (msg.sender == t.User) {
             t.User = SP;
+            customers.push(SP);
         }
+        
             
     }
 
@@ -131,6 +141,7 @@ contract Purchase {
     {
         uint index = 0;
         bool found = false;
+        // Need to check map
         for (uint i = 0; i < trans.length; i++) {
             if (keccak256(trans[i].TransNum) == keccak256(transNum)) {
                 index = i;
@@ -139,7 +150,7 @@ contract Purchase {
             }
         }
         if (!found) {
-            return;
+            revert();
         }
         Transaction storage t =  trans[index];
         if (msg.sender == t.User) {
@@ -151,7 +162,7 @@ contract Purchase {
         }
         for (uint j = 0; j < 3; j++) {
             if (!t.Confirmations[j]) {
-                return;
+                revert();
             }
         }
         FullFill(index);
@@ -181,11 +192,11 @@ contract Purchase {
             }
         }
         if (!found) {
-            return;
+            revert();
         }
         Transaction storage t =  trans[index];
         if (msg.sender != t.Business || t.Confirmations[0]) {
-            return;
+            revert();
         }
         deleteTrans(index);
     }
@@ -198,6 +209,7 @@ contract Purchase {
         uint index = 0;
         bool found = false;
         for (uint i = 0; i < trans.length; i++) {
+          // Change the transN uint64
             if (keccak256(trans[i].TransNum) == keccak256(transNum)) {
                 index = i;
                 found = true;
@@ -205,11 +217,11 @@ contract Purchase {
             }
         }
         if (!found) {
-            return;
+            revert();
         }
         Transaction storage t =  trans[index];
         if (msg.sender != t.SP || t.Confirmations[2]) {
-            return;
+            revert();
         }
         deleteTrans(index);
     }
@@ -229,11 +241,11 @@ contract Purchase {
             }
         }
         if (!found) {
-            return;
+            revert();
         }
         Transaction storage t =  trans[index];
         if (msg.sender != t.User || t.Confirmations[1] || t.Confirmations[2]) {
-            return;
+            revert();
         }
         deleteTrans(index);
     }
