@@ -1,0 +1,11 @@
+{
+  "name": "bitclave_contracts",
+  "version": "1.0.0",
+  "description": "smart contracts for bitclave",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC"
+}
