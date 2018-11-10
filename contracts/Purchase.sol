@@ -7,7 +7,7 @@ contract Purchase {
     uint private RETURN_DEDUCTION_RATIO = 200;
     
     
-    address private contractOwner;
+    address public contractOwner;
     struct Transaction {
         bytes32 TransKey;
         address User;
@@ -20,7 +20,7 @@ contract Purchase {
         uint SPShare;
         bool isValue;
     }
-    mapping(bytes32 => Transaction) private trans;
+    mapping(bytes32 => Transaction) public trans;
     
     constructor() public payable {
         contractOwner = msg.sender;
@@ -32,8 +32,10 @@ contract Purchase {
     }
 
     modifier OnlyBusiness(bytes32 transKey) { 
-        
-        require (trans[transKey].Business == msg.sender); 
+        require (
+        trans[transKey].Business == msg.sender,
+        "Only business can call."
+        );
         _; 
     }
     
@@ -50,13 +52,76 @@ contract Purchase {
     }
     
     modifier TransExist(bytes32 transKey) {
-        require(trans[transKey].isValue == true);
+        //emit log("TE");
+        require(
+        trans[transKey].isValue == true,
+        "transKey must exist!"
+        );
         _;
     }
     
     event Aborted();
     event PurchaseConfirmed();
     event ItemReceived();
+    event log_trans(bytes32 b);
+
+    event LogAddress(string, bytes32);
+    function log(string s , bytes32 x) public{
+        emit LogAddress(s, x);
+    }
+    
+    function GetTransEntities(bytes32 key)
+        public
+        view
+        returns (
+        bytes32,
+        address,
+        address,
+        address)
+    {
+        return (trans[key].TransKey,
+                trans[key].User,
+                trans[key].SP,
+                trans[key].Business);
+    }
+    
+    function GetTransConditions(bytes32 key)
+        public
+        view
+        returns (
+        bytes32,
+        bool,
+        bool,
+        bool)
+    {
+        return (trans[key].TransKey,
+                trans[key].isUserConfirm,
+                trans[key].isSPConfirm,
+                trans[key].isBusinessConfirm);
+    }
+    
+    function GetTransShares(bytes32 key)
+        public
+        view
+        returns (
+        bytes32,
+        uint,
+        uint)
+    {
+        return (trans[key].TransKey,
+                trans[key].UserShare,
+                trans[key].SPShare);
+    }
+    
+    
+    function GetTransExist(bytes32 key)
+        public
+        view
+        returns (bool)
+    {
+        return (trans[key].isValue);
+    }
+    
     
     function GetReturnDeductionRatio()
         public
@@ -74,7 +139,7 @@ contract Purchase {
     }
     
     function GenerateTransKey(uint salt) 
-        private view 
+        public view 
         returns (bytes32 TransKey) 
     {
         /* 
@@ -95,8 +160,11 @@ contract Purchase {
         /*
         check if value is enough
         */
+
+        /*
         require(msg.value >= UserShare + SPShare);
-        
+        */
+
         /*
         making sure the key is not duplicated
         */
@@ -109,9 +177,8 @@ contract Purchase {
             }else{
                 break;
             }
-        }    
-        
-        trans[transKey] = Transaction({
+        }
+        Transaction memory t = Transaction({
             TransKey : transKey,
             Business : msg.sender,
             User : address(0),
@@ -123,6 +190,16 @@ contract Purchase {
             SPShare : SPShare,
             isValue: true
         });
+
+        trans[transKey] = t;
+        require(
+        trans[transKey].isValue == true,
+        "transKey must exist!"
+        );
+        require (
+        trans[transKey].Business == msg.sender,
+        "Only business can call."
+        );
         return transKey;
     }
     
@@ -133,6 +210,9 @@ contract Purchase {
     {
         Transaction storage t =  trans[transKey];
         t.User = User;
+        //log("key", transKey);
+        log("get_key", trans[transKey].TransKey);
+        //log("sender", msg.sender);
     }
     
     function AssignSP(bytes32 transKey, address SP)
@@ -149,9 +229,8 @@ contract Purchase {
         TransExist(transKey)
         OnlyUser(transKey)
     {
-        Transaction storage t =  trans[transKey];
-        t.isUserConfirm = true;
-        FulFill(transKey);
+        trans[transKey].isUserConfirm = true;
+        // FulFill(transKey);
     }
     
     function SPConfirm(bytes32 transKey)
@@ -159,9 +238,8 @@ contract Purchase {
         TransExist(transKey)
         OnlySP(transKey)
     {
-        Transaction storage t =  trans[transKey];
-        t.isSPConfirm = true;
-        FulFill(transKey);
+        trans[transKey].isSPConfirm = true;
+        // FulFill(transKey);
     }
     
     function BusinessConfirm(bytes32 transKey)
@@ -169,13 +247,12 @@ contract Purchase {
         TransExist(transKey)
         OnlyBusiness(transKey)
     {
-        Transaction storage t =  trans[transKey];
-        t.isBusinessConfirm = true;
-        FulFill(transKey);
+        trans[transKey].isBusinessConfirm = true;
+        // FulFill(transKey);
     }
     
     function FulFill(bytes32 transKey)
-        private
+        public
         TransExist(transKey)
     {
         
